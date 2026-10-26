@@ -272,6 +272,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private PopupWindow openPopup;
     /** Reorder mode is on (top-bar button). */
     private boolean reordering;
+    /** Move from the tile menu: one tile, so putting it down also ends the mode (as on Fire TV's own home). */
+    private boolean singleMove;
     /** Key of the tile being carried in reorder mode, or null. */
     private String movingKey;
     /** Tile order when reorder mode started, to save only when something moved. */
@@ -943,6 +945,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onResume() {
         super.onResume();
+        // stock_home_fast: the cover over Amazon's home can go once this screen has drawn (two frames on).
+        View decor = getWindow().getDecorView();
+        decor.postOnAnimation(() -> decor.postOnAnimation(HomeKeyService::launcherShown));
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
             recreate();
@@ -1262,6 +1267,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // Vendor keys (TCL Netflix button, 4062) never reach the key services, only the focused window.
         if (event.getKeyCode() >= 1000 && RemoteKeys.handle(this, event, homeAppKeys.get(event.getKeyCode()), null)) return true;
         if (handleSettingsKey(event)) return true;
+        if (event.getKeyCode() == KeyEvent.KEYCODE_MENU) {
+            View f = getCurrentFocus();
+            android.util.Log.i("TvHomeMenu", "action=" + event.getAction() + " repeat=" + event.getRepeatCount()
+                    + " canceled=" + event.isCanceled() + " tileMenu=" + tileMenuEnabled + " reordering=" + reordering
+                    + " dockEditing=" + dockEditing + " popup=" + (openPopup != null)
+                    + (openPopup != null ? "(showing=" + openPopup.isShowing() + ")" : "")
+                    + " prompt=" + (cardPrompt != null) + " tile=" + focusedTilePosition() + " lastFocused=" + lastFocused
+                    + " focus=" + (f == null ? "null" : f.getClass().getSimpleName() + "#" + f.getId()));
+            // A popup that was dismissed without its listener running (or never shown) must not block the menu.
+            if (openPopup != null && !openPopup.isShowing()) openPopup = null;
+        }
         if (tileMenuEnabled && !reordering && openPopup == null && cardPrompt == null
                 && event.getKeyCode() == KeyEvent.KEYCODE_MENU) {
             int position = focusedTilePosition();
@@ -1280,6 +1296,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         boolean ok = code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER
                 || code == KeyEvent.KEYCODE_NUMPAD_ENTER;
         boolean back = code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_ESCAPE;
+        // Menu while moving: done. Puts a carried tile down and ends the mode, saving the order, so the Menu button
+        // never seems dead because a mode with nothing on screen to show it was still on.
+        if (code == KeyEvent.KEYCODE_MENU) {
+            if (!down && !event.isCanceled()) endReorder();
+            return true;
+        }
         if (movingKey != null) {
             switch (code) {
                 case KeyEvent.KEYCODE_DPAD_LEFT:
@@ -1290,7 +1312,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     return true;
                 default:
                     if (ok || back) {
-                        if (!down) drop();
+                        if (!down) {
+                            drop();
+                            if (singleMove) endReorder();
+                        }
                         return true;
                     }
                     return super.dispatchKeyEvent(event);
@@ -1486,6 +1511,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** Ends the mode and saves the order if it changed since the mode started. */
     private void endReorder() {
         if (!reordering) return;
+        singleMove = false;
         dockEditing = false;
         dockEditSlot = -1;
         dockEditAppKey = null;
@@ -3345,6 +3371,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (at < 0) return;
             focusTile(at);
             pickUp(at);
+            singleMove = true;
             Toast.makeText(this, R.string.reorder_hint, Toast.LENGTH_LONG).show();
         });
         if (appLibraryEnabled) addSettingsMenuRow(rows, popup, R.string.library_remove_shortcut, () -> {

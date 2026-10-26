@@ -71,6 +71,8 @@ public class HomeKeyService extends AccessibilityService {
     private final Set<String> stockHome = new HashSet<>();
     /** stock_home_redirect, the stock launcher's package. */
     private String stockHomePackage = "";
+    /** stock_home_fast (Fire OS): redirects launched through AlarmManager under a cover; null when off. */
+    private FireHome fireHome;
     /** power_on_home: the Live TV package to send back to Home, empty when off; armed until this uptime or a key. */
     private String powerOnLiveTv = "";
     private long powerOnUntil;
@@ -149,6 +151,7 @@ public class HomeKeyService extends AccessibilityService {
         }
         if (gamepads != null) gamepads.stop();
         if (consumeVolumeKeys) VolumeKeys.stop();
+        if (fireHome != null) fireHome.release();
         super.onDestroy();
     }
 
@@ -205,6 +208,12 @@ public class HomeKeyService extends AccessibilityService {
             for (ResolveInfo ri : getPackageManager().queryIntentActivities(home, PackageManager.MATCH_DISABLED_COMPONENTS)) {
                 stockHome.add(ri.activityInfo.name);
             }
+        }
+        boolean fast = !stockHome.isEmpty() && getResources().getBoolean(R.bool.stock_home_fast);
+        if (fast && fireHome == null) fireHome = new FireHome(this);
+        if (!fast && fireHome != null) {
+            fireHome.release();
+            fireHome = null;
         }
         // power_on_home, off by default. Not with boot_to_live_tv, or with Live TV picked as the Open on start app:
         // those open Live TV on purpose at boot.
@@ -301,6 +310,12 @@ public class HomeKeyService extends AccessibilityService {
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return;
+        // stock_home_fast: this launcher's home screen is up, so the cover can go. Only MainActivity counts: the
+        // cover itself, a dialog or a panel of this app must not lift it early.
+        if (fireHome != null && event.getClassName() != null
+                && MainActivity.class.getName().contentEquals(event.getClassName())) {
+            fireHome.landed();
+        }
         // app_keys "front:" entries: only activities count, so a toast or the volume bar doesn't change the app in front.
         if ((!frontAppKeys.isEmpty() || !frontAppScancodes.isEmpty())
                 && event.getPackageName() != null && event.getClassName() != null) {
@@ -319,7 +334,10 @@ public class HomeKeyService extends AccessibilityService {
         }
         // stock_home_redirect: the firmware turned the stock launcher back on and its home screen came up.
         CharSequence cls = event.getClassName();
-        if (!stockHome.isEmpty() && cls != null && stockHome.contains(cls.toString())) openHome();
+        if (!stockHome.isEmpty() && cls != null && stockHome.contains(cls.toString())) {
+            if (fireHome != null) fireHome.redirect();
+            else openHome();
+        }
     }
 
     /** How long power_on_home stays armed after the screen turns on without a reboot. */
@@ -352,6 +370,12 @@ public class HomeKeyService extends AccessibilityService {
 
     static boolean stillArmed(long now, long armedUntil) {
         return now < armedUntil;
+    }
+
+    /** stock_home_fast: MainActivity has drawn, so FireHome can lift its cover (same process, main thread). */
+    static void launcherShown() {
+        HomeKeyService service = running;
+        if (service != null && service.fireHome != null) service.fireHome.landed();
     }
 
     /** The settings menu offers Restart only while this helper is bound: it opens the system power menu. */

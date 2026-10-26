@@ -1,0 +1,4 @@
+# Salidas de los scripts de diagnóstico: datos de una tele concreta, se regeneran en cada corrida.
+*.txt
+# Mensaje de commit temporal.
+.commit-msg
