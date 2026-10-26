@@ -1267,17 +1267,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // Vendor keys (TCL Netflix button, 4062) never reach the key services, only the focused window.
         if (event.getKeyCode() >= 1000 && RemoteKeys.handle(this, event, homeAppKeys.get(event.getKeyCode()), null)) return true;
         if (handleSettingsKey(event)) return true;
-        if (event.getKeyCode() == KeyEvent.KEYCODE_MENU) {
-            View f = getCurrentFocus();
-            android.util.Log.i("TvHomeMenu", "action=" + event.getAction() + " repeat=" + event.getRepeatCount()
-                    + " canceled=" + event.isCanceled() + " tileMenu=" + tileMenuEnabled + " reordering=" + reordering
-                    + " dockEditing=" + dockEditing + " popup=" + (openPopup != null)
-                    + (openPopup != null ? "(showing=" + openPopup.isShowing() + ")" : "")
-                    + " prompt=" + (cardPrompt != null) + " tile=" + focusedTilePosition() + " lastFocused=" + lastFocused
-                    + " focus=" + (f == null ? "null" : f.getClass().getSimpleName() + "#" + f.getId()));
-            // A popup that was dismissed without its listener running (or never shown) must not block the menu.
-            if (openPopup != null && !openPopup.isShowing()) openPopup = null;
-        }
+        // A popup that was dismissed without its listener running (or never shown) must not block the menu.
+        if (event.getKeyCode() == KeyEvent.KEYCODE_MENU && openPopup != null && !openPopup.isShowing()) openPopup = null;
         if (tileMenuEnabled && !reordering && openPopup == null && cardPrompt == null
                 && event.getKeyCode() == KeyEvent.KEYCODE_MENU) {
             int position = focusedTilePosition();
@@ -3372,7 +3363,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             focusTile(at);
             pickUp(at);
             singleMove = true;
-            Toast.makeText(this, R.string.reorder_hint, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.tile_move_hint, Toast.LENGTH_LONG).show();
         });
         if (appLibraryEnabled) addSettingsMenuRow(rows, popup, R.string.library_remove_shortcut, () -> {
             if (LibraryApps.save(this, pkg, false)) reloadApps(false);

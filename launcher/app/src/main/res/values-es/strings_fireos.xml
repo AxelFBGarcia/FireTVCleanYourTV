@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tile_move_hint">Las flechas mueven la app. OK o Atrás la suelta.</string>
+</resources>

@@ -12,6 +12,19 @@ desactivar (paquete protegido), así que se queda instalado y el launcher se pon
 | Ver si el servicio de Home está vivo | `TV_HOST=192.168.1.70 bash fireos/estado.sh` |
 | Grabar una prueba con el control | `TV_HOST=192.168.1.70 bash fireos/registro.sh` |
 | Medir Home → launcher (3 tipos de alarma) | `TV_HOST=192.168.1.70 bash fireos/medir.sh` |
+| Revisar una tele nueva antes de instalar (solo lee) | `TV_HOST=192.168.1.70 bash fireos/diagnostico.sh` |
+
+Los scripts comparten `fireos/_comun.sh` (conexión, consulta robusta de la pantalla al frente, activar y
+verificar el servicio de Home).
+
+## Dónde está la configuración de Fire TV
+
+En el tipo de compilación `fireos` (`launcher/app/build.gradle`): es el release más
+`launcher/app/src/fireos/res/values/config.xml`, cuyos valores reemplazan a los de `src/main/res/values`.
+Ahí van el dock, la Appstore, el menú por app y la redirección de Home. `src/main/res/values/config.xml`
+se queda como en el repo original, así que traer cambios de `upstream` no choca con esto. Se compila con
+`./gradlew assembleFireos` (el instalador ya lo hace). No uses `tools/theme.sh --reset` pensando que
+regresa a esta configuración: los temas solo se sobreponen, la de Fire TV vive en el APK.
 
 El estado original de la tele se guarda en `~/.cleanyourtv/fireos-<ip>.txt` en la primera instalación;
 `desinstalar.sh` lo usa para dejarla como estaba.
@@ -45,4 +58,5 @@ Para probar otro modo sin recompilar: `settings put global cyt_fire_alarm clock`
   launcher hasta ~4 s, que se ven en negro.
 - Una actualización de Fire OS puede cambiar el nombre de la pantalla de inicio de Amazon o el comportamiento
   de las alarmas; si Home deja de funcionar, correr `estado.sh` y `registro.sh`.
-- `MainActivity` deja en el log una línea `TvHomeMenu` por cada pulsación de Menú (diagnóstico; se puede quitar).
+- `min_futurity=0` es un ajuste global: cualquier app puede programar alarmas inmediatas. En una tele no
+  tiene efecto práctico; `desinstalar.sh` lo regresa a como estaba.

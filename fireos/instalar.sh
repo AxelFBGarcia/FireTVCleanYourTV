@@ -5,22 +5,7 @@
 #
 # Uso, desde la carpeta cleanyourtv:   TV_HOST=192.168.1.70 bash fireos/instalar.sh
 set -euo pipefail
-cd "$(dirname "$0")/.."
-ROOT=$PWD
-: "${TV_HOST:?pon TV_HOST=<ip de la tele>}"
-PY=$ROOT/tools/venv/bin/python
-[ -x "$PY" ] || { echo "Falta el venv: python3 -m venv tools/venv && tools/venv/bin/pip install -r tools/requirements.txt" >&2; exit 1; }
-tv() { "$PY" -I "$ROOT/tools/tv.py" "$1"; }
-resumed() {   # dumpsys es grande: se guarda en la tele y solo viaja la línea que importa, con reintentos.
-  local r=""
-  for _ in 1 2 3; do
-    r=$(tools/venv/bin/python -I tools/tv.py 'dumpsys activity activities > /data/local/tmp/cyt_a.txt 2>/dev/null; grep mResumedActivity /data/local/tmp/cyt_a.txt; rm -f /data/local/tmp/cyt_a.txt' 2>/dev/null | tr -d '\r' || true)
-    [ -n "$r" ] && break; sleep 1
-  done
-  printf '%s' "$r"
-}
-PKG=com.gathin.tvhome
-SVC=$PKG/.HomeKeyService
+. "$(dirname "$0")/_comun.sh"
 
 echo "== 1/6 Revisando la tele"
 MODEL=$(tv 'getprop ro.product.model' | tr -d '\r\n')
@@ -60,8 +45,9 @@ cd "$ROOT/launcher"
 # solo si las licencias están aceptadas (ya lo están en tu SDK). Si se queja de licencias:
 #   yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
 ./gradlew -q --console=plain testDebugUnitTest --tests 'com.gathin.tvhome.FireHomeTest' --tests 'com.gathin.tvhome.HomeKeyServiceTest'
-./gradlew -q --console=plain assembleRelease
-APK=$ROOT/launcher/app/build/outputs/apk/release/app-release.apk
+# El tipo de compilación fireos es el release más src/fireos/res (la configuración de Fire TV).
+./gradlew -q --console=plain assembleFireos
+APK=$ROOT/launcher/app/build/outputs/apk/fireos/app-fireos.apk
 ls -lh "$APK"
 cd "$ROOT"
 
@@ -93,34 +79,13 @@ printf '%s\n' \
   "cmd package compile -m speed -f $PKG" \
   | "$PY" -I tools/tv.py --batch
 tv "am force-stop $PKG" >/dev/null
-# Sin -W: esperar el arranque dentro de la misma conexión a veces corta el canal ("Broken pipe") aunque la app sí
-# arranque. Se lanza y luego se pregunta, hasta 10 s, qué actividad quedó al frente.
-tv "am start -a android.intent.action.MAIN -c android.intent.category.HOME -n $PKG/.MainActivity" || true
-UP=""
-for _ in 1 2 3 4 5; do
-  sleep 2
-  NOW=$(resumed)
-  case "$NOW" in *"$PKG/.MainActivity"*) UP=1; break ;; esac
-done
-echo "${NOW:-sin respuesta}"
-[ -n "$UP" ] || { echo "El launcher no quedó al frente; no se activó el atajo de Home. El inicio de Amazon sigue normal." >&2; exit 1; }
+open_launcher || { echo "El launcher no quedó al frente; no se activó el atajo de Home. El inicio de Amazon sigue normal." >&2; exit 1; }
+echo "El launcher arrancó."
 
 echo "== 6/6 Activando el atajo de Home"
 # min_futurity=0: sin esto Android 9 retrasa la alarma ~5 s y el truco no sirve. Se conserva lo que ya hubiera.
 tv 'c=$(settings get global alarm_manager_constants); case "$c" in null|"") settings put global alarm_manager_constants min_futurity=0 ;; *min_futurity=0*) ;; *) settings put global alarm_manager_constants "$c,min_futurity=0" ;; esac; echo alarm_manager_constants=$(settings get global alarm_manager_constants)'
-# Se agrega el servicio sin quitar otros que ya estuvieran activos, y se comprueba que Android lo conectó.
-enable_svc() {
-  tv "s=\$(settings get secure enabled_accessibility_services); case \"\$s\" in *$SVC*) ;; null|'') settings put secure enabled_accessibility_services $SVC ;; *) settings put secure enabled_accessibility_services \"\$s:$SVC\" ;; esac; settings put secure accessibility_enabled 1; echo servicios=\$(settings get secure enabled_accessibility_services)"
-}
-bound() { tv 'dumpsys accessibility | grep -c "eventTypes=TYPE_WINDOW_STATE_CHANGED"' 2>/dev/null | tr -dc '0-9'; }
-OK=""
-for try in 1 2 3; do
-  enable_svc
-  sleep 4
-  if [ "$(bound)" -ge 1 ] 2>/dev/null && tv 'settings get secure enabled_accessibility_services' | grep -qF "$SVC"; then OK=1; break; fi
-  echo "El servicio no quedó conectado (intento $try); reintento."
-done
-[ -n "$OK" ] || { echo "No se pudo conectar el servicio de Home. Corre: TV_HOST=$TV_HOST bash fireos/activar.sh y pásale fireos/activar.txt a Claude." >&2; exit 1; }
+enable_service || { echo "No se pudo conectar el servicio de Home. Corre: TV_HOST=$TV_HOST bash fireos/estado.sh y revisa fireos/estado.txt." >&2; exit 1; }
 echo "Servicio de Home conectado."
 tv 'input keyevent KEYCODE_HOME' >/dev/null
 sleep 3

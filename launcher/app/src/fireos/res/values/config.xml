@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Amazon Fire TV (Fire OS) overrides for the fireos build type: each value here replaces the one of the same
+     name in src/main/res/values (config.xml, config_fireos.xml). Arrays are replaced whole. -->
+<resources>
+    <!-- Amazon's launcher is protected and stays Home; HomeKeyService sends its home screen here (FireHome). -->
+    <string name="stock_home_redirect" translatable="false">com.amazon.tv.launcher</string>
+    <bool name="stock_home_fast">true</bool>
+    <!-- Fire OS takes the accessibility helper off the list after a force stop; Home and BootRepair put it back.
+         fireos/instalar.sh grants WRITE_SECURE_SETTINGS for it. -->
+    <bool name="restore_key_services">true</bool>
+
+    <!-- Fire TV package names: Prime Video is com.amazon.firebat, YouTube is com.amazon.firetv.youtube. -->
+    <string-array name="dock_apps">
+        <item>com.netflix.ninja</item>
+        <item>com.amazon.firebat</item>
+        <item>com.amazon.firetv.youtube</item>
+        <item>com.disney.disneyplus</item>
+    </string-array>
+    <string-array name="hidden_apps">
+        <item>com.amazon.firetv.troubleshooting</item>
+        <item>com.mediatek.wwtv.tvcenter</item>
+        <item>com.mitv.gallery</item>
+    </string-array>
+
+    <!-- The Appstore declares no leanback entry, so it is added as a library app and opens on its store front. -->
+    <string-array name="library_apps" translatable="false">
+        <item>com.amazon.venezia</item>
+    </string-array>
+    <string-array name="launch_actions">
+        <item>com.amazon.venezia=com.amazon.venezia.ade.FEATURED_LAUNCH</item>
+    </string-array>
+    <string-array name="app_labels">
+        <item>com.amazon.venezia=Appstore</item>
+        <item>com.amazon.firebat=Prime Video</item>
+        <item>com.amazon.firetv.youtube=YouTube</item>
+    </string-array>
+
+    <!-- The remote's Menu button opens the focused app's menu, as on Fire TV's own home. -->
+    <bool name="tile_menu">true</bool>
+    <bool name="app_library">true</bool>
+</resources>

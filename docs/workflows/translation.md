@@ -18,6 +18,8 @@
      language that names them itself (`values-zh-rCN`, `values-vi`, `values-ko`). Keep `lunar_stems` at ten
      items and `lunar_branches` at twelve: `Lunar.java` indexes both by position, so a short list crashes
      the launcher on a TV running that language and nothing anywhere else.
+   - `strings_fireos.xml`: the strings this fork adds for Fire TV (`tile_move_hint`), kept out of
+     `strings.xml` so upstream updates merge without conflicts (`values-es`).
 3. Add the locale to `launcher/app/src/main/res/xml/locales_config.xml`, in the tag form: a language
    folder that is not registered there cannot be chosen for the launcher alone on Android 13+.
 4. Add the language to the Languages list in `README.md`.

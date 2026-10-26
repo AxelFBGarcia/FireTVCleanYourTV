@@ -2,21 +2,8 @@
 # 1) Comprueba que el launcher arranca sin tronar.  2) Conecta el servicio de Home y verifica que quedó vivo.
 # 3) Mide Home -> CleanYourTV con cada tipo de alarma (idle, exact, clock), 3 veces, pulsando Home por software.
 # Resultados en fireos/medir.txt.   Uso:   TV_HOST=192.168.1.70 bash fireos/medir.sh
-cd "$(dirname "$0")/.." || exit 1
-: "${TV_HOST:?pon TV_HOST=<ip de la tele>}"
-tv() { tools/venv/bin/python -I tools/tv.py "$1" 2>&1; }
-PKG=com.gathin.tvhome
-SVC=$PKG/.HomeKeyService
+. "$(dirname "$0")/_comun.sh"
 OUT=fireos/medir.txt
-resumed() {   # dumpsys es grande: se guarda en la tele y solo viaja la línea que importa, con reintentos.
-  local r=""
-  for _ in 1 2 3; do
-    r=$(tools/venv/bin/python -I tools/tv.py 'dumpsys activity activities > /data/local/tmp/cyt_a.txt 2>/dev/null; grep mResumedActivity /data/local/tmp/cyt_a.txt; rm -f /data/local/tmp/cyt_a.txt' 2>/dev/null | tr -d '\r' || true)
-    [ -n "$r" ] && break; sleep 1
-  done
-  printf '%s' "$r"
-}
-bound() { tv 'dumpsys accessibility | grep -c "eventTypes=TYPE_WINDOW_STATE_CHANGED"' | tr -dc '0-9'; }
 {
   echo "## 1. Arranque"
   tv 'logcat -b crash -c; logcat -c'
@@ -32,13 +19,7 @@ case "$NOW" in
 esac
 
 echo "## 2. Servicio" >> "$OUT"
-for try in 1 2 3; do
-  tv "s=\$(settings get secure enabled_accessibility_services); case \"\$s\" in *$SVC*) ;; null|'') settings put secure enabled_accessibility_services $SVC ;; *) settings put secure enabled_accessibility_services \"\$s:$SVC\" ;; esac; settings put secure accessibility_enabled 1" >> "$OUT"
-  sleep 4
-  [ "$(bound)" -ge 1 ] 2>/dev/null && break
-done
-echo "bound=$(bound) servicios=$(tv 'settings get secure enabled_accessibility_services')" >> "$OUT"
-[ "$(bound)" -ge 1 ] 2>/dev/null || { echo "2/3 El servicio no se conectó. Pásale fireos/medir.txt a Claude."; exit 1; }
+enable_service 2>> "$OUT" || { echo "2/3 El servicio no se conectó. Revisa fireos/medir.txt."; exit 1; }
 echo "2/3 Servicio de Home conectado."
 
 echo "## 3. Medición" >> "$OUT"
@@ -50,7 +31,7 @@ for mode in idle exact clock; do
     tv 'logcat -c' >/dev/null
     tv 'input keyevent KEYCODE_HOME' >/dev/null
     sleep 5
-    echo "### $mode #$rep (bound=$(bound))" >> "$OUT"
+    echo "### $mode #$rep (servicio=$(bound))" >> "$OUT"
     tv 'logcat -d -v time | grep -E "FireHome|ActivityManager.*(START u0|Displayed)"' >> "$OUT"
     echo "   $mode #$rep listo"
   done

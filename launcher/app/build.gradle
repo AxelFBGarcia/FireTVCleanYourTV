@@ -24,6 +24,13 @@ android {
             // Sideloaded over ADB, never published: sign with the debug key so it installs over a debug build.
             signingConfig signingConfigs.debug
         }
+        // Amazon Fire TV (Fire OS): the release build plus src/fireos/res, whose values override config.xml
+        // (Amazon's home sent on to this launcher, Fire TV dock and Appstore tile). config.xml itself stays as
+        // upstream has it. Build with ./gradlew assembleFireos; see fireos/LEEME.md.
+        fireos {
+            initWith release
+            matchingFallbacks = ['release']
+        }
     }
 
     packagingOptions {

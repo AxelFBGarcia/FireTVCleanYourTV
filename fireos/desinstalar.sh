@@ -2,12 +2,7 @@
 # Quita el launcher de Fire OS y deja la tele como estaba: el inicio de Amazon vuelve a ser el único.
 # Uso, desde la carpeta cleanyourtv:   TV_HOST=192.168.1.70 bash fireos/desinstalar.sh
 set -euo pipefail
-cd "$(dirname "$0")/.."
-: "${TV_HOST:?pon TV_HOST=<ip de la tele>}"
-PY=$PWD/tools/venv/bin/python
-tv() { "$PY" -I tools/tv.py "$1"; }
-PKG=com.gathin.tvhome
-SVC=$PKG/.HomeKeyService
+. "$(dirname "$0")/_comun.sh"
 STATE="$HOME/.cleanyourtv/fireos-$(printf '%s' "$TV_HOST" | tr -c 'A-Za-z0-9._-' '_').txt"
 
 # 1. Quitar solo nuestro servicio de accesibilidad.

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Move from the tile menu moves one tile: putting it down ends the mode (MainActivity.singleMove). -->
+    <string name="tile_move_hint">Arrows move the app. OK or Back puts it down.</string>
+</resources>

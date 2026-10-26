@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fire OS: with stock_home_redirect set to com.amazon.tv.launcher, send Amazon's home on to this launcher in
+         about half a second instead of five. Fire OS holds back app launches for ~5 s after Home; the launch goes
+         through AlarmManager instead (system_server is exempt) while a black cover hides Amazon's home. Needs
+         `settings put global alarm_manager_constants min_futurity=0` (fireos/instalar.sh sets it). See FireHome.
+         Off here; the fireos build type (src/fireos/res) turns it on. -->
+    <bool name="stock_home_fast">false</bool>
+</resources>
