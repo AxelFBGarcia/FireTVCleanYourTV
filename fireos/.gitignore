@@ -2,3 +2,9 @@
 *.txt
 # Mensaje de commit temporal.
 .commit-msg
+# Las fotos personales no se suben al repo.
+tema/wallpapers/*
+!tema/wallpapers/.keep
+tema/wallpaper.jpg
+# Capturas de pantalla de la tele.
+*.png

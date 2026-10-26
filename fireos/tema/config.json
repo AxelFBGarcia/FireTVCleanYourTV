@@ -1,0 +1,14 @@
+{
+  "wallpaper": true,
+  "wallpaper_rotation_minutes": 0,
+  "wallpaper_dim": 15,
+  "columns": 7,
+  "rows_below_dock": 0,
+  "dock_title": false,
+  "dock_glass": true,
+  "dock_opacity": 60,
+  "dock_even_padding": true,
+  "fade_rows": true,
+  "ambient_glow": false,
+  "glass_style": "rim"
+}
