@@ -60,3 +60,34 @@ Para probar otro modo sin recompilar: `settings put global cyt_fire_alarm clock`
   de las alarmas; si Home deja de funcionar, correr `estado.sh` y `registro.sh`.
 - `min_futurity=0` es un ajuste global: cualquier app puede programar alarmas inmediatas. En una tele no
   tiene efecto práctico; `desinstalar.sh` lo regresa a como estaba.
+
+## Música de Spotify en la tele (`musica.sh`)
+
+Controla la app de Spotify de la tele desde la laptop con la Web API oficial (Spotify Connect): suena en
+segundo plano y la tele se queda en el inicio. Necesita Spotify Premium.
+
+**Una sola vez:**
+1. En [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) → *Create app*: nombre y
+   descripción libres, *Redirect URI* `http://127.0.0.1:8888/callback` (con *Add*), marca *Web API* → *Save*.
+   En *Settings* copia el *Client ID*.
+2. En la tele abre Spotify con tu cuenta; luego Home.
+3. `bash fireos/musica.sh que`: pide el Client ID, abre el navegador para autorizar y guarda la sesión en
+   `~/.cleanyourtv/spotify.json`. Con `bash fireos/musica.sh tele` eliges cuál dispositivo es la tele.
+4. Opcional, para escribir `musica <link>` sin comillas desde cualquier carpeta (zsh trata `?` como comodín):
+   `echo "alias musica='noglob bash $HOME/pruebas/cleanyourtv/fireos/musica.sh'" >> ~/.zshrc`
+
+**Uso:**
+
+| Qué | Comando |
+|---|---|
+| Poner una playlist, álbum, artista, canción o podcast | `musica "https://open.spotify.com/playlist/..."` (`--aleatorio` para mezclar) |
+| Pausa / seguir / siguiente / anterior | `musica pausa`, `musica sigue`, `musica siguiente`, `musica anterior` |
+| Volumen de Spotify | `musica volumen 30` |
+| Qué está sonando | `musica que` |
+| Cambiar de dispositivo / ver dispositivos | `musica tele`, `musica dispositivos` |
+| Borrar la sesión | `musica salir` (y quitar el acceso en spotify.com → Cuenta → Apps) |
+
+Si Fire OS cerró Spotify, la tele deja de aparecer en Spotify. Con ADB encendido y `TV_HOST=192.168.1.70`,
+el script abre Spotify por ADB, espera a que aparezca, reproduce y regresa al inicio; sin ADB, abre Spotify en
+la tele una vez y repite. YouTube no está soportado: sonar sin abrir la app exigiría extraer el audio por
+fuera de YouTube, contra sus términos.
